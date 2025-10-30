@@ -1,0 +1,25 @@
+version: "3.8" 
+services: 
+  db: 
+    build: ./db 
+    environment: 
+      MYSQL_ROOT_PASSWORD: ${DB_PASS}
+      MYSQL_DATABASE: ${DB} 
+    ports: 
+      - "3340:3306" 
+    networks: 
+      - my_network 
+  app: 
+    build: ./app 
+    depends_on: 
+      - db 
+    environment: 
+      DB_HOST: ${DB_HOST} 
+      DB_USER: ${DB_USR}
+      DB_PASSWORD: ${DB_PASS}
+      DB_NAME: ${DB}
+    networks: 
+      - my_network 
+networks: 
+  my_network: 
+    driver: bridge
