@@ -1,25 +1,71 @@
-version: "3.8" 
-services: 
-  db: 
-    build: ./db 
-    environment: 
-      MYSQL_ROOT_PASSWORD: ${DB_PASS}
-      MYSQL_DATABASE: ${DB} 
-    ports: 
-      - "3340:3306" 
-    networks: 
-      - my_network 
-  app: 
-    build: ./app 
-    depends_on: 
-      - db 
-    environment: 
-      DB_HOST: ${DB_HOST} 
-      DB_USER: ${DB_USR}
-      DB_PASSWORD: ${DB_PASS}
-      DB_NAME: ${DB}
-    networks: 
-      - my_network 
-networks: 
-  my_network: 
-    driver: bridge
+version: '3.8'
+services:
+  db:
+    build: ./db
+    container_name: moja_baza
+    # environment:
+    #   MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    #   MYSQL_DATABASE: ${DB_NAME}
+    env_file: .env
+    ports:
+      - "3340:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+    networks:
+      - db-backNetwork
+
+  migrator:
+    build: ./back-auth
+    command: ["npx", "prisma", "migrate", "deploy"]
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - db-backNetwork
+
+  back1:
+    build: ./back-auth
+    env_file: .env
+    ports:
+      - "3001:3000"
+    depends_on:
+      migrator:
+        condition: service_started
+    networks:
+      - db-backNetwork
+      - front-backNetwork
+
+  back2:
+    build: ./back-logic
+    env_file: .env
+    ports:
+      - "3002:3000"
+    depends_on:
+      migrator:
+        condition: service_started
+    networks:
+      - db-backNetwork
+      - front-backNetwork
+  
+  front:
+    build: ./docker-front
+    env_file: .env
+    ports:
+      - 5137:5137
+    depends_on:
+      back1:
+        condition: service_healthy
+      back2:
+        condition: service_healthy
+    networks:
+      - front-backNetwork
+
+volumes:
+  db_data:    
+
+networks:
+  db-backNetwork:
+  front-backNetwork:    
