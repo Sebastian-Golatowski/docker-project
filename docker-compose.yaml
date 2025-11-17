@@ -16,7 +16,7 @@ services:
     networks:
       - db-backNetwork
 
-  migrator:
+  migrator: 
     build: ./back-auth
     command: ["npx", "prisma", "migrate", "deploy"]
     env_file: .env
