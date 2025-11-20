@@ -1,15 +1,30 @@
-import { Button } from "./Button"
+import { Button } from './Button'
 
-const Header = (props) => {
-    return(
-        <header className="header">
-            <h1>Hi, {props.title}</h1>
-            <Button color='green' name="Add"/>
-        </header>
-    )
+const Header = ({ title, onAdd, showAdd, onLogout }) => {
+  return (
+    <header className='header'>
+      <h1>{title}</h1>
+      
+      <div style={{ display: 'flex', gap: '10px' }}>
+        <Button 
+            color={showAdd ? 'red' : 'green'} 
+            name={showAdd ? 'Close' : 'Add'} 
+            onClick={onAdd} 
+        />
+        {onLogout && (
+            <Button 
+                color='black' 
+                name='Logout' 
+                onClick={onLogout} 
+            />
+        )}
+      </div>
+    </header>
+  )
 }
+
 Header.defaultProps = {
-    title: "Task Tracker"
+  title: 'Task Tracker',
 }
 
 export default Header
