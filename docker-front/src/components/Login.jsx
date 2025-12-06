@@ -1,29 +1,29 @@
 import { useState } from 'react'
 
 const Login = ({ onLogin }) => {
-  const [email, setEmail] = useState('')
+  const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
 
   const onSubmit = (e) => {
     e.preventDefault()
 
-    if (!email || !password) {
-      alert('Please enter both email and password')
+    if (!login || !password) {
+      alert('Please enter both login and password')
       return
     }
     
-    onLogin({ email, password })
+    onLogin({ login, password })
   }
 
   return (
     <form className='add-form' onSubmit={onSubmit}>
       <div className='form-control'>
-        <label>Email</label>
+        <label>Login</label>
         <input
           type='text'
-          placeholder='Enter Email'
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          placeholder='Enter Login'
+          value={login}
+          onChange={(e) => setLogin(e.target.value)}
         />
       </div>
       <div className='form-control'>

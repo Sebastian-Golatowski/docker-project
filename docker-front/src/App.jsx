@@ -3,76 +3,120 @@ import { Tasks } from './components/Tasks'
 import { useState, useEffect } from "react"
 import { AddTask } from './components/AddTask'
 import Login from './components/Login'
+import Register from './components/Register'
+
+const authPort = import.meta.env.VITE_AUTH_BACK_PORT
+
+const AUTH_API_URL = `http://localhost:${authPort}`
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [showAddTask, setshowAddTask] = useState(false)
-  
-  // Check if user is already logged in when app loads
+  const [isLoginView, setIsLoginView] = useState(true)
+  const [currentUser, setCurrentUser] = useState('')
+
+  const [tasks, setTasks] = useState([
+    { id: 1, text: "Doctors Appointment", day: "Feb 5th at 2:30pm", reminder: true },
+    { id: 2, text: "Meeting at School", day: "Feb 6th at 1:30pm", reminder: true }
+  ])
+
   useEffect(() => {
     const token = localStorage.getItem('jwt_token')
     if(token) {
-        setIsAuthenticated(true)
+        fetchCurrentUser(token)
     }
   }, [])
 
-  const [tasks, setTasks] = useState([
-    {
-        "id": 1,
-        "text": "Doctors Appointment",
-        "day": "Feb 5th at 2:30pm",
-        "reminder": true
-    },
-    {
-        "id": 2,
-        "text": "Meeting at School",
-        "day": "Feb 6th at 1:30pm",
-        "reminder": true
-    }
-  ])
+  const fetchCurrentUser = async (token) => {
+    try {
+      const res = await fetch(`${AUTH_API_URL}/me`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
 
-  // --- LOGIN LOGIC ---
-  const loginUser = async (details) => {
-    console.log("Attempting login with:", details)
+      const data = await res.json()
 
-    // TODO: REPLACE THIS BLOCK WITH YOUR REAL BACKEND CALL LATER
-    // Example: 
-    // const res = await fetch('http://localhost:5000/api/login', { method: 'POST', ... })
-    // const data = await res.json()
-    
-    // MOCK LOGIC:
-    if(details.email === "user" && details.password === "123") {
-        // Create a fake token
-        const fakeToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." 
-        
-        // Save to local storage so they stay logged in on refresh
-        localStorage.setItem('jwt_token', fakeToken)
-        
+      if (res.ok) {
+        setCurrentUser(data.username)
         setIsAuthenticated(true)
-    } else {
-        alert("Invalid credentials! (Try user/123)")
+      } else {
+        logoutUser()
+      }
+    } catch (error) {
+      console.error("Error fetching user:", error)
+      logoutUser()
     }
   }
 
-  // --- LOGOUT LOGIC ---
+  const loginUser = async (details) => {
+    try {
+      const res = await fetch(`${AUTH_API_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          login: details.login, 
+          password: details.password 
+        }),
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        localStorage.setItem('jwt_token', data.token)
+        fetchCurrentUser(data.token)
+      } else {
+        alert(data.message || "Login failed")
+      }
+    } catch (error) {
+      console.error("Login Error:", error)
+      alert("Server error")
+    }
+  }
+
+  const registerUser = async (details) => {
+      try {
+        const res = await fetch(`${AUTH_API_URL}/register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(details),
+        })
+
+        const data = await res.json()
+
+        if (res.ok) {
+          alert("Registration Successful! Please Login.")
+          setIsLoginView(true)
+        } else {
+          alert(data.message || "Registration failed")
+        }
+      } catch (error) {
+        console.error("Register Error:", error)
+        alert("Server error")
+      }
+  }
+
   const logoutUser = () => {
       localStorage.removeItem('jwt_token')
       setIsAuthenticated(false)
-      setshowAddTask(false) // reset UI
-      setTasks(null)
+      setshowAddTask(false) 
+      setCurrentUser('')
+      setTasks([]) 
   }
 
-  // Delete Task
   const deleteTask = (id) => {
     setTasks(tasks.filter((task) => task.id !== id)) 
   }
 
-  // Toggle Reminder
   const reminder = (id) => {
     setTasks(tasks.map((task) => task.id === id ? {...task, reminder: !task.reminder} : task)) 
   }
 
-  // Add Task
   const addTask = (task) => {
     const id = Math.floor(Math.random() * 10000) + 1
     const newTask = {id, ... task}
@@ -81,16 +125,32 @@ function App() {
 
   return (
     <div className='container'>
-      {/* CONDITION: If NOT authenticated, show Login. Else, show App */}
       {!isAuthenticated ? (
           <>
-            <header className='header'><h1>Task Tracker Login</h1></header>
-            <Login onLogin={loginUser} />
+            <header className='header'>
+                <h1>{isLoginView ? 'Login' : 'Register'}</h1>
+                <button 
+                    className='btn' 
+                    style={{ backgroundColor: isLoginView ? 'green' : 'black' }}
+                    onClick={() => setIsLoginView(!isLoginView)}
+                >
+                    {isLoginView ? 'Sign Up' : 'Login'}
+                </button>
+            </header>
+
+            {isLoginView ? (
+                <Login onLogin={loginUser} />
+            ) : (
+                <Register 
+                    onRegister={registerUser} 
+                    onSwitchToLogin={() => setIsLoginView(true)} 
+                />
+            )}
           </>
       ) : (
         <>
           <Header 
-            title="Jon" 
+            title={`Hello, ${currentUser}`} 
             onAdd={() => setshowAddTask(!showAddTask)} 
             showAdd={showAddTask}
             onLogout={logoutUser} 
@@ -110,4 +170,3 @@ function App() {
 }
 
 export default App
-
