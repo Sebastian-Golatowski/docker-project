@@ -44,7 +44,7 @@ export const AddTask = ({onAdd}) => {
             checked = {reminder}
             value={reminder} 
             onChange={(e) => {
-                setDay(e.currentTarget.checked)
+                setReminder(e.currentTarget.checked)
             }}/>
         </div>
         <input type="submit" value="Save Task" className="btn btn-block"/>

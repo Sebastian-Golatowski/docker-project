@@ -7,7 +7,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_PASS}
       MYSQL_DATABASE: ${DB}
     ports:
-      - "${DB_PORT}:${DB_PORT}"
+      - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
@@ -32,14 +32,17 @@ services:
   back-auth:
     build:  
       context: ./back-auth
-      # args:
-      #   PORT: ${VITE_AUTH_BACK_PORT}
+      args:
+        PORT: ${VITE_AUTH_BACK_PORT}
     ports:
       - "${VITE_AUTH_BACK_PORT}:${VITE_AUTH_BACK_PORT}"
     env_file: .env
     depends_on:
       migrator:
         condition: service_completed_successfully 
+    networks:
+      - db-backNetwork
+      - front-backNetwork
     volumes:
       - prisma_shared:/usr/src/app/prisma
     healthcheck:
@@ -48,9 +51,6 @@ services:
       timeout: 10s
       retries: 3 
       start_period: 10s
-    networks:
-      - db-backNetwork
-      - front-backNetwork
 
   # back-logic:
   #   build: ./back-logic
@@ -61,26 +61,6 @@ services:
   #   networks:
   #     - db-backNetwork
   #     - front-backNetwork
-  back-logic:
-    build:  
-      context: ./back-logic
-    ports:
-      - "${VITE_LOGIC_BACK_PORT}:${VITE_LOGIC_BACK_PORT}"
-    env_file: .env
-    depends_on:
-      migrator:
-        condition: service_completed_successfully 
-    volumes:
-      - prisma_shared:/usr/src/app/prisma
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${VITE_LOGIC_BACK_PORT}/healthcheck"]
-      interval: 30s
-      timeout: 10s
-      retries: 3 
-      start_period: 10s
-    networks:
-      - db-backNetwork
-      - front-backNetwork
   
   front:
     build: ./docker-front
@@ -90,8 +70,8 @@ services:
     depends_on:
       back-auth:
         condition: service_healthy
-      back-logic:
-        condition: service_healthy
+      # back2:
+      #   condition: service_healthy
     # command: npm run dev -- --host
     networks:
       - front-backNetwork

@@ -6,19 +6,17 @@ import Login from './components/Login'
 import Register from './components/Register'
 
 const authPort = import.meta.env.VITE_AUTH_BACK_PORT
+const taskPort = import.meta.env.VITE_LOGIC_BACK_PORT
 
 const AUTH_API_URL = `http://localhost:${authPort}`
+const TASK_API_URL = `http://localhost:${taskPort}`
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [showAddTask, setshowAddTask] = useState(false)
   const [isLoginView, setIsLoginView] = useState(true)
   const [currentUser, setCurrentUser] = useState('')
-
-  const [tasks, setTasks] = useState([
-    { id: 1, text: "Doctors Appointment", day: "Feb 5th at 2:30pm", reminder: true },
-    { id: 2, text: "Meeting at School", day: "Feb 6th at 1:30pm", reminder: true }
-  ])
+  const [tasks, setTasks] = useState([])
 
   useEffect(() => {
     const token = localStorage.getItem('jwt_token')
@@ -41,12 +39,33 @@ function App() {
       if (res.ok) {
         setCurrentUser(data.username)
         setIsAuthenticated(true)
+        fetchTasks(token); 
       } else {
         logoutUser()
       }
     } catch (error) {
       console.error("Error fetching user:", error)
       logoutUser()
+    }
+  }
+
+  const fetchTasks = async (token) => {
+    try {
+        const res = await fetch(`${TASK_API_URL}/`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        
+        if (res.ok) {
+            const data = await res.json()
+            setTasks(data)
+        } else {
+            console.error("Failed to fetch tasks")
+        }
+    } catch (error) {
+        console.error("Error fetching tasks:", error)
     }
   }
 
@@ -109,18 +128,69 @@ function App() {
       setTasks([]) 
   }
 
-  const deleteTask = (id) => {
-    setTasks(tasks.filter((task) => task.id !== id)) 
+  const deleteTask = async (id) => {
+    const token = localStorage.getItem('jwt_token')
+    try {
+        const res = await fetch(`${TASK_API_URL}/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+
+        if(res.ok) {
+            setTasks(tasks.filter((task) => task.id !== id))
+        } else {
+            alert("Error deleting task")
+        }
+    } catch (error) {
+        console.error("Delete Error", error)
+    }
   }
 
-  const reminder = (id) => {
-    setTasks(tasks.map((task) => task.id === id ? {...task, reminder: !task.reminder} : task)) 
+  const reminder = async (id) => {
+    const token = localStorage.getItem('jwt_token')
+    
+    setTasks(tasks.map((task) => task.id === id ? {...task, reminder: !task.reminder} : task))
+
+    try {
+        const res = await fetch(`${TASK_API_URL}/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        
+        if(!res.ok) {
+            console.error("Failed to update reminder on server")
+            setTasks(tasks.map((task) => task.id === id ? {...task, reminder: !task.reminder} : task))
+        }
+    } catch (error) {
+        console.error("Toggle Error", error)
+    }
   }
 
-  const addTask = (task) => {
-    const id = Math.floor(Math.random() * 10000) + 1
-    const newTask = {id, ... task}
-    setTasks([...tasks, newTask])
+  const addTask = async (task) => {
+    const token = localStorage.getItem('jwt_token')
+    try {
+        const res = await fetch(`${TASK_API_URL}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(task)
+        })
+
+        if(res.ok) {
+            const updatedTasks = await res.json()
+            setTasks(updatedTasks)
+        } else {
+            alert("Failed to add task")
+        }
+    } catch (error) {
+        console.error("Add Task Error", error)
+    }
   }
 
   return (
